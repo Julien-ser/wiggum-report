@@ -15,6 +15,7 @@ Wiggum Report runs indefinitely and checks your GitHub account every week for ne
 - **Data Persistence**: SQLite
 - **Environment**: python-dotenv for secure credential management
 - **Linting/Formatting**: Black, Flake8
+- **Deployment**: Docker, Docker Compose, systemd, cron
 
 ## Project Structure
 
@@ -165,6 +166,57 @@ flake8
 
 ## Deployment
 
+### Docker Deployment (Recommended)
+
+Wiggum Report can be deployed using Docker for easy containerized operation:
+
+1. **Prerequisites:**
+   - Docker and Docker Compose installed
+   - Your API credentials configured in `.env` file (see Setup section)
+
+2. **Build and run:**
+   ```bash
+   # Build the Docker image
+   docker-compose build
+
+   # Start the service in detached mode
+   docker-compose up -d
+
+   # View logs
+   docker-compose logs -f
+
+   # Stop the service
+   docker-compose down
+   ```
+
+3. **Data persistence:**
+   - Reports are saved to `./data/reports/` on the host machine
+   - Logs are saved to `./logs/wiggum.log` on the host machine
+   - The service will automatically restart after system reboot (due to `restart: unless-stopped`)
+
+4. **Configuration:**
+   The `.env` file in the project root is automatically loaded by docker-compose. Ensure it contains all required API credentials before starting.
+
+5. **Update:**
+   ```bash
+   # Pull latest code changes and rebuild
+   git pull
+   docker-compose build --no-cache
+   docker-compose up -d
+   ```
+
+6. **Monitor:**
+   ```bash
+   # Check container status
+   docker-compose ps
+
+   # View recent logs
+   docker-compose logs --tail=100
+
+   # Execute a one-off command (e.g., test)
+   docker-compose exec wiggum-report python -c "print('Hello')"
+   ```
+
 ### Running as a Systemd Service
 
 Create a systemd service file at `/etc/systemd/system/wiggum-report.service`:
@@ -178,7 +230,7 @@ After=network.target
 Type=simple
 User=yourusername
 WorkingDirectory=/path/to/wiggum-report
-Environment="PATH=/path/to/venv/bin"
+Environment="PATH=/usr/bin:/usr/local/bin"
 ExecStart=/usr/bin/python3 -m src.scheduler
 Restart=always
 RestartSec=10
@@ -194,24 +246,6 @@ sudo systemctl enable wiggum-report
 sudo systemctl start wiggum-report
 sudo systemctl status wiggum-report
 ```
-
-### Running with Cron (Alternative)
-
-If you prefer cron over the built-in scheduler, you can run the report once on a schedule:
-
-```bash
-# Edit crontab
-crontab -e
-
-# Add this line to run every Monday at 9 AM
-0 9 * * 1 cd /path/to/wiggum-report && /usr/bin/python3 -m src.scheduler --run-once
-```
-
-Note: The `--run-once` flag can be added to the scheduler (future enhancement) to run once and exit, suitable for cron jobs.
-
-### Docker Deployment (Future)
-
-A Dockerfile and docker-compose.yml will be provided in a future update for containerized deployment.
 
 ## License
 

@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  wiggum-report:
+    build: .
+    container_name: wiggum-report
+    restart: unless-stopped
+    environment:
+      # GitHub
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      
+      # X/Twitter API
+      - X_API_KEY=${X_API_KEY}
+      - X_API_SECRET=${X_API_SECRET}
+      - X_ACCESS_TOKEN=${X_ACCESS_TOKEN}
+      - X_ACCESS_TOKEN_SECRET=${X_ACCESS_TOKEN_SECRET}
+      
+      # LinkedIn API
+      - LINKEDIN_CLIENT_ID=${LINKEDIN_CLIENT_ID}
+      - LINKEDIN_CLIENT_SECRET=${LINKEDIN_CLIENT_SECRET}
+      - LINKEDIN_ACCESS_TOKEN=${LINKEDIN_ACCESS_TOKEN}
+      
+      # Scheduling
+      - SCHEDULE_CRON=${SCHEDULE_CRON:-0 9 * * 1}
+      - SCHEDULE_INTERVAL_HOURS=${SCHEDULE_INTERVAL_HOURS}
+      
+      # Data & Logging
+      - DATA_DIR=/app/data
+      - LOG_DIR=/app/logs
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FILE=${LOG_FILE:-wiggum.log}
+      - LOG_MAX_SIZE_MB=${LOG_MAX_SIZE_MB:-10}
+      - LOG_BACKUP_COUNT=${LOG_BACKUP_COUNT:-5}
+    
+    volumes:
+      # Persist data (reports) and logs
+      - ./data:/app/data
+      - ./logs:/app/logs
+    
+    # No ports needed; this is a scheduled background service
+    networks:
+      - wiggum-network
+
+networks:
+  wiggum-network:
+    driver: bridge
