@@ -62,32 +62,6 @@ class WiggumScheduler:
 
         self.logger.info("WiggumScheduler initialized successfully")
 
-    def _setup_logging(self) -> logging.Logger:
-        """
-        Configure logging for the scheduler.
-
-        Returns:
-            Configured logger instance
-        """
-        logger = logging.getLogger("wiggum_scheduler")
-        logger.setLevel(logging.INFO)
-
-        # Console handler
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-
-        # Formatter
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        console_handler.setFormatter(formatter)
-
-        # Avoid adding handler multiple times
-        if not logger.handlers:
-            logger.addHandler(console_handler)
-
-        return logger
-
     def run_weekly_report(self) -> None:
         """
         Execute the weekly report generation and social media posting.

@@ -37,15 +37,13 @@ def setup_logging(
     """
     # Override defaults from settings if provided
     if settings:
-        log_level = os.getenv("LOG_LEVEL", log_level)
-        log_dir = os.getenv("LOG_DIR", log_dir)
-        log_file = os.getenv("LOG_FILE", log_file)
-        max_bytes = (
-            int(os.getenv("LOG_MAX_SIZE_MB", str(max_bytes // (1024 * 1024))))
-            * 1024
-            * 1024
-        )
-        backup_count = int(os.getenv("LOG_BACKUP_COUNT", str(backup_count)))
+        # Use settings attributes directly, not environment variables
+        log_level = getattr(settings, "log_level", log_level)
+        log_dir = getattr(settings, "log_dir", log_dir)
+        log_file = getattr(settings, "log_file", log_file)
+        max_bytes_mb = getattr(settings, "log_max_size_mb", max_bytes // (1024 * 1024))
+        max_bytes = max_bytes_mb * 1024 * 1024
+        backup_count = getattr(settings, "log_backup_count", backup_count)
 
     # Convert log level string to numeric level
     numeric_level = getattr(logging, log_level.upper(), None)
@@ -56,9 +54,11 @@ def setup_logging(
     logger = logging.getLogger("wiggum")
     logger.setLevel(numeric_level)
 
-    # Avoid adding handlers multiple times
+    # Clear any existing handlers to allow reconfiguration
     if logger.handlers:
-        return logger
+        for handler in logger.handlers[:]:
+            logger.removeHandler(handler)
+            handler.close()
 
     # Create formatter
     formatter = logging.Formatter(

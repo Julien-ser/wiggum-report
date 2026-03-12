@@ -79,8 +79,14 @@ class TestSetupLogging:
     def test_setup_logging_no_console(self):
         """Test setup_logging with console_output=False."""
         logger = setup_logging(console_output=False)
+        # Check that there are no StreamHandler instances that are not FileHandler subclasses.
+        # RotatingFileHandler is a subclass of both StreamHandler and FileHandler,
+        # so we exclude FileHandler and its subclasses to find true console handlers.
         console_handlers = [
-            h for h in logger.handlers if isinstance(h, logging.StreamHandler)
+            h
+            for h in logger.handlers
+            if isinstance(h, logging.StreamHandler)
+            and not isinstance(h, logging.FileHandler)
         ]
         assert len(console_handlers) == 0
         # Cleanup
