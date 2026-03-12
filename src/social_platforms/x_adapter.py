@@ -1,6 +1,6 @@
 """X (Twitter) social media platform adapter."""
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 from .adapter import SocialMediaAdapter
 
 
@@ -31,7 +31,8 @@ class XAdapter(SocialMediaAdapter):
         Format metadata into a tweet.
 
         Args:
-            metadata: Dictionary from MetadataCollector.collect_weekly_metadata()
+            metadata: Dictionary from
+                MetadataCollector.collect_weekly_metadata()
 
         Returns:
             Formatted tweet text (max 280 chars)
@@ -45,85 +46,108 @@ class XAdapter(SocialMediaAdapter):
         new_repos = metadata.get("new_repositories", [])
         updated_repos = metadata.get("updated_repositories", [])
 
-        # Start building tweet
+        # Build body content (without hashtags)
         parts = []
 
         # Header with emoji
         parts.append("🧵 Weekly GitHub roundup!\n")
 
         # Summary line
-        summary_line = f"📊 {total_repos} repos • {new_count} new • {updated_count} updated • ⭐ {total_stars} stars"
+        summary_line = (
+            f"📊 {total_repos} repos • {new_count} new • "
+            f"{updated_count} updated • ⭐ {total_stars} stars"
+        )
         parts.append(summary_line + "\n")
 
-        # New repositories (top 3)
+        # New repositories (top 3) with shortened links
         if new_repos:
             parts.append("🆕 New repos: ")
-            repo_names = []
+            repo_entries = []
             for repo in new_repos[:3]:
                 name = repo.get("name", "")
+                url = repo.get("html_url", "")
                 if name:
-                    repo_names.append(f"`{name}`")
-            parts.append(", ".join(repo_names))
+                    short_url = self._shorten_url(url)
+                    if short_url:
+                        entry = f"`{name}`({short_url})"
+                    else:
+                        entry = f"`{name}`"
+                    repo_entries.append(entry)
+            parts.append(", ".join(repo_entries))
 
             if len(new_repos) > 3:
                 parts.append(f" +{len(new_repos) - 3} more")
             parts.append("\n")
 
-        # Trending updated repos (top 2 by stars)
+        # Trending updated repos (top 2 by stars) with shortened links
         if updated_repos and len(updated_repos) > 0:
             sorted_updated = sorted(
                 updated_repos, key=lambda x: x.get("stars", 0), reverse=True
             )
             if sorted_updated:
                 parts.append("🔥 Top updated: ")
-                trending_names = []
+                trending_entries = []
                 for repo in sorted_updated[:2]:
                     name = repo.get("name", "")
+                    url = repo.get("html_url", "")
                     if name:
-                        trending_names.append(f"`{name}`")
-                parts.append(", ".join(trending_names))
+                        short_url = self._shorten_url(url)
+                        if short_url:
+                            entry = f"`{name}`({short_url})"
+                        else:
+                            entry = f"`{name}`"
+                        trending_entries.append(entry)
+                parts.append(", ".join(trending_entries))
                 if len(sorted_updated) > 2:
                     parts.append(f" +{len(sorted_updated) - 2} more")
                 parts.append("\n")
 
-        # Hashtags
-        parts.append("#WiggumReport #GitHub #OpenSource")
+        body = "".join(parts).rstrip()
+        hashtags = "#WiggumReport #GitHub #OpenSource"
 
-        # Join and ensure within limit
-        tweet = "".join(parts)
+        total_length = len(body) + 1 + len(hashtags)
+        if total_length > self.max_length:
+            max_body_len = self.max_length - len(hashtags) - 1
+            body = self._truncate_body(body, max_body_len)
 
-        # If still too long, truncate summary line
-        if len(tweet) > self.max_length:
-            tweet = self._truncate_content(tweet)
+        return body + "\n" + hashtags
 
-        return tweet[: self.max_length]
-
-    def _truncate_content(self, content: str) -> str:
+    def _shorten_url(self, url: str) -> str:
         """
-        Truncate content to fit within max_length, preserving hashtags.
+        Shorten a URL for inclusion in tweets.
+
+        Currently strips protocol (https://) for brevity.
+        Could be extended to use URL shorteners like bit.ly.
 
         Args:
-            content: Full content to truncate
+            url: Full URL to shorten
 
         Returns:
-            Truncated content
+            Shortened URL string
         """
-        hashtags = "#WiggumReport #GitHub #OpenSource"
-        max_content = self.max_length - len(hashtags) - 1  # -1 for space/newline
+        if not url:
+            return ""
+        # Strip protocol for brevity
+        url = url.replace("https://", "").replace("http://", "")
+        return url
 
-        if len(content) > max_content:
-            # Try to preserve the header and truncate the middle
-            lines = content.split("\n")
-            header = lines[0] if lines else ""  # Keep header line
-            rest = "\n".join(lines[1:-1]) if len(lines) > 2 else ""
+    def _truncate_body(self, body: str, max_len: int) -> str:
+        """
+        Truncate body content to max_len, trying to preserve structure.
 
-            if len(header) + len(rest) > max_content:
-                # Need to truncate rest significantly
-                rest = rest[: max_content - len(header) - 3] + "..."
-                content = header + "\n" + rest + "\n" + hashtags
-            else:
-                content = header + "\n" + rest + "\n" + hashtags
+        Args:
+            body: Body text to truncate
+            max_len: Maximum allowed length
+
+        Returns:
+            Truncated body string
+        """
+        if len(body) <= max_len:
+            return body
+
+        truncated = body[:max_len]
+        last_newline = truncated.rfind("\n")
+        if last_newline > 0 and last_newline >= max_len * 0.5:
+            return truncated[:last_newline].rstrip()
         else:
-            content = content + "\n" + hashtags
-
-        return content[: self.max_length]
+            return body[: max_len - 3].rstrip() + "..."

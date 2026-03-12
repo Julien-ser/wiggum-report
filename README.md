@@ -32,7 +32,9 @@ wiggum-report/
 │   ├── test_config.py
 │   ├── test_github_client.py
 │   ├── test_metadata_collector.py
-│   └── test_data_persistence.py
+│   ├── test_data_persistence.py
+│   ├── test_templates.py
+│   └── test_social_platforms.py
 ├── logs/                # Log files
 ├── .env.example         # Environment variables template
 ├── requirements.txt     # Python dependencies
@@ -80,7 +82,7 @@ wiggum-report/
 **Phase 3: Markdown Generation & Social Media Formatting** - In Progress
 - [x] Design Markdown template
 - [x] Implement report generator
-- [ ] Create platform-specific adapters (X, LinkedIn)
+- [x] Create platform-specific adapters (X with 280-char limit and shortened links, LinkedIn with professional format)
 - [ ] Build content optimizer
 
 **Phase 4: Scheduling, Automation & Deployment** - Pending
