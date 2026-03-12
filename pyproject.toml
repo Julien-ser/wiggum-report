@@ -19,3 +19,12 @@ exclude = [
 [build-system]
 requires = ['setuptools>=61.0']
 build-backend = 'setuptools.build_backend'
+
+[project]
+name = "wiggum-report"
+version = "0.1.0"
+description = "Automated weekly report generator for GitHub repositories"
+requires-python = ">=3.10"
+
+[tool.setuptools]
+packages = ["src"]

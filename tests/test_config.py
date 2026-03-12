@@ -1,6 +1,7 @@
 import os
 import pytest
-from src.config import Settings, load_settings, _parse_int
+from src.config import Settings, load_settings
+from src.config.settings import _parse_int
 
 
 class TestParseInt:

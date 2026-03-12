@@ -22,9 +22,17 @@ Wiggum Report runs indefinitely and checks your GitHub account every week for ne
 wiggum-report/
 ├── src/
 │   ├── config/          # Configuration loading
-│   ├── social_platforms/  # X and LinkedIn adapters
-│   └── scripts/         # Markdown templates
+│   │   └── settings.py  # Settings and environment variables
+│   ├── github_client.py      # GitHub API client using PyGithub
+│   ├── metadata_collector.py # Repository metadata collection
+│   ├── data_persistence.py   # SQLite persistence layer
+│   ├── social_platforms/     # X and LinkedIn adapters
+│   └── scripts/              # Markdown templates
 ├── tests/               # Unit tests
+│   ├── test_config.py
+│   ├── test_github_client.py
+│   ├── test_metadata_collector.py
+│   └── test_data_persistence.py
 ├── logs/                # Log files
 ├── .env.example         # Environment variables template
 ├── requirements.txt     # Python dependencies
@@ -57,16 +65,16 @@ wiggum-report/
 
 ## Current Progress
 
-**Phase 1: Planning & Setup** - In Progress
+**Phase 1: Planning & Setup** - Complete
 - [x] Define project architecture and technology stack
 - [x] Initialize project repository with requirements.txt and linting/formatting
 - [x] Create project directory structure
-- [ ] Set up environment variables management
+- [x] Set up environment variables management
 
-**Phase 2: GitHub Integration & Data Collection** - Pending
-- [ ] Implement GitHub API client
-- [ ] Create repository metadata collector
-- [ ] Build data persistence layer (SQLite)
+**Phase 2: GitHub Integration & Data Collection** - In Progress
+- [x] Implement GitHub API client
+- [x] Create repository metadata collector
+- [x] Build data persistence layer using SQLite to store weekly reports and track reported repos
 - [ ] Add date filtering logic
 
 **Phase 3: Markdown Generation & Social Media Formatting** - Pending
