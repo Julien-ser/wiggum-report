@@ -5,7 +5,7 @@
 - [x] Define project architecture and technology stack (Node.js/Python, schedule library, GitHub API, social media APIs)
 - [x] Initialize project repository with package.json/requirements.txt and configure linting/formatting (ESLint/Prettier or Black/Flake8)
 - [x] Create project directory structure: `/src` for core logic, `/config` for API keys/secrets, `/scripts` for Markdown templates, `/tests` for unit tests
-- [ ] Set up environment variables management using python-dotenv or dotenv to securely store GitHub token, X API credentials, LinkedIn API credentials
+- [x] Set up environment variables management using python-dotenv or dotenv to securely store GitHub token, X API credentials, LinkedIn API credentials
 
 ## Phase 2: GitHub Integration & Data Collection
 - [ ] Implement GitHub API client using Octokit (Node.js) or PyGithub (Python) to fetch authenticated user's repositories
