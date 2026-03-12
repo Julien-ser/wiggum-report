@@ -64,8 +64,21 @@ wiggum-report/
 
 3. **Run the application:**
    ```bash
-   python -m src.main
+   python -m src.scheduler
    ```
+
+   The scheduler will:
+   - Run the report immediately on startup (can be disabled)
+   - Then run weekly according to your `SCHEDULE_CRON` or `SCHEDULE_INTERVAL_HOURS` settings
+   - Generate and save markdown reports to `./data/reports/`
+   - Log all activity to console (can be extended to file logging)
+
+   To run once without scheduling:
+   ```bash
+   python -c "from src.scheduler import WiggumScheduler; from src.config.settings import load_settings; s = WiggumScheduler(load_settings()); s.run_weekly_report()"
+   ```
+
+   To run indefinitely as a daemon/service, see the Deployment section below.
 
 ## Current Progress
 
@@ -87,11 +100,11 @@ wiggum-report/
 - [x] Create platform-specific adapters (X with 280-char limit and shortened links, LinkedIn with professional format)
 - [x] Build content optimizer that truncates or summarizes long descriptions to fit platform constraints while maintaining key information
 
-**Phase 4: Scheduling, Automation & Deployment** - Pending
-- [ ] Implement weekly scheduler
-- [ ] Add social media posting integration
-- [ ] Create logging system
-- [ ] Build Dockerfile and docker-compose.yml
+**Phase 4: Scheduling, Automation & Deployment** - In Progress
+- [x] Implement weekly scheduler using Python `schedule` library with configurable timing (cron or interval-based)
+- [ ] Add actual social media posting integration (adapters format content, but API posting not yet implemented)
+- [x] Create comprehensive logging system embedded in scheduler
+- [ ] Build Dockerfile and docker-compose.yml for containerized deployment
 
 ## Development
 
@@ -109,6 +122,56 @@ Lint:
 ```bash
 flake8
 ```
+
+## Deployment
+
+### Running as a Systemd Service
+
+Create a systemd service file at `/etc/systemd/system/wiggum-report.service`:
+
+```ini
+[Unit]
+Description=Wiggum Report Scheduler
+After=network.target
+
+[Service]
+Type=simple
+User=yourusername
+WorkingDirectory=/path/to/wiggum-report
+Environment="PATH=/path/to/venv/bin"
+ExecStart=/usr/bin/python3 -m src.scheduler
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable wiggum-report
+sudo systemctl start wiggum-report
+sudo systemctl status wiggum-report
+```
+
+### Running with Cron (Alternative)
+
+If you prefer cron over the built-in scheduler, you can run the report once on a schedule:
+
+```bash
+# Edit crontab
+crontab -e
+
+# Add this line to run every Monday at 9 AM
+0 9 * * 1 cd /path/to/wiggum-report && /usr/bin/python3 -m src.scheduler --run-once
+```
+
+Note: The `--run-once` flag can be added to the scheduler (future enhancement) to run once and exit, suitable for cron jobs.
+
+### Docker Deployment (Future)
+
+A Dockerfile and docker-compose.yml will be provided in a future update for containerized deployment.
 
 ## License
 
