@@ -1,21 +1,51 @@
 """LinkedIn social media platform adapter."""
 
-from typing import Dict, Any, List
+import time
 from datetime import datetime, timedelta
+from typing import Dict, Any
+from linkedin_api import Linkedin
 from .adapter import SocialMediaAdapter
 
 
 class LinkedInAdapter(SocialMediaAdapter):
     """Adapter for LinkedIn platform with professional format."""
 
-    def __init__(self, max_length: int = 3000):
+    def __init__(
+        self,
+        client_id: str,
+        client_secret: str,
+        access_token: str,
+        max_length: int = 3000,
+        max_retries: int = 3,
+        initial_backoff: float = 1.0,
+        max_backoff: float = 60.0,
+    ):
         """
-        Initialize LinkedIn adapter.
+        Initialize LinkedIn adapter with API credentials.
 
         Args:
-            max_length: Maximum character length (LinkedIn allows ~3000 chars for posts)
+            client_id: LinkedIn API client ID
+            client_secret: LinkedIn API client secret
+            access_token: LinkedIn API access token
+            max_length: Maximum character length (default 3000 for LinkedIn)
+            max_retries: Maximum number of retry attempts
+            initial_backoff: Initial backoff time in seconds
+            max_backoff: Maximum backoff time in seconds
         """
         self._max_length = max_length
+        self._max_retries = max_retries
+        self._initial_backoff = initial_backoff
+        self._max_backoff = max_backoff
+
+        # Initialize LinkedIn API client
+        # Note: linkedin-api library uses username/password or cookies, but we'll use access token
+        # For OAuth 2.0 access token, we can set it directly
+        self.client = Linkedin(client_id=client_id, client_secret=client_secret)
+        # Set access token manually (linkedin-api library doesn't have a direct way)
+        self.client.set_access_token(access_token)
+
+        # Verify credentials on initialization
+        self._verify_credentials()
 
     @property
     def platform_name(self) -> str:
@@ -167,6 +197,147 @@ class LinkedInAdapter(SocialMediaAdapter):
             return f"{start.strftime('%B %d, %Y')} - {end.strftime('%B %d, %Y')}"
         except:
             return "Last 7 days"
+
+    def _truncate_for_linkedin(self, content: str) -> str:
+        """
+        Truncate content to fit LinkedIn's limit while preserving structure.
+
+        Args:
+            content: Full post content
+
+        Returns:
+            Truncated content within limit
+        """
+        if len(content) <= self.max_length:
+            return content
+
+        # Strategy: preserve first sections, truncate repository lists
+        sections = content.split("###")
+
+        # Always keep header and summary
+        if len(sections) <= 2:
+            return content[: self.max_length - 100] + "\n\n*(post truncated)*"
+
+        header_and_summary = sections[0] + "###" + sections[1]
+
+        # Calculate remaining space
+        remaining = self.max_length - len(header_and_summary) - 100
+
+        if remaining <= 0:
+            # Even header+summary is too long, truncate it
+            return content[: self.max_length - 100] + "\n\n*(post truncated)*"
+
+        # Keep first few repos from new and updated sections, truncate rest
+        new_repos_section = ""
+        updated_repos_section = ""
+
+        # Find new repos section
+        for section in sections[2:]:
+            if "New Repositories" in section:
+                new_repos_section = "###" + section
+                break
+
+        # Find notable updates section
+        for section in sections[2:]:
+            if "Notable Updates" in section:
+                updated_repos_section = "###" + section
+                break
+
+        cta_and_hashtags = ""
+        # Find CTA and hashtags
+        for section in sections:
+            if "Call to Action" in section:
+                cta_and_hashtags = "###" + section
+                break
+
+        # Reconstruct limited version
+        result = header_and_summary + "\n\n"
+
+        if new_repos_section:
+            result += self._limit_repo_list(new_repos_section, remaining // 2) + "\n\n"
+        if updated_repos_section:
+            result += (
+                self._limit_repo_list(updated_repos_section, remaining // 2) + "\n\n"
+            )
+        if cta_and_hashtags:
+            result += cta_and_hashtags
+
+        return result[: self.max_length]
+
+    def _verify_credentials(self) -> None:
+        """
+        Verify LinkedIn API credentials are valid.
+
+        Raises:
+            Exception: If credentials are invalid or verification fails
+        """
+        try:
+            # Get own profile to verify credentials
+            profile = self.client.get_profile()
+            if profile:
+                self.logger.info(
+                    f"LinkedIn API credentials verified for: {profile.get('firstName', '')} {profile.get('lastName', '')}"
+                )
+            else:
+                raise Exception(
+                    "Invalid LinkedIn API credentials - no profile returned"
+                )
+        except Exception as e:
+            self.logger.error(f"LinkedIn credential verification failed: {e}")
+            raise
+
+    def post(self, text: str) -> bool:
+        """
+        Post text to LinkedIn with retry logic and rate limit handling.
+
+        Args:
+            text: The LinkedIn post text
+
+        Returns:
+            True if posting succeeded, False otherwise
+        """
+        for attempt in range(1, self._max_retries + 1):
+            try:
+                self.logger.info(
+                    f"Posting to LinkedIn (attempt {attempt}/{self._max_retries})"
+                )
+                # linkedin-api's post_message method
+                response = self.client.post_message(text)
+
+                if response:
+                    self.logger.info(f"Successfully posted to LinkedIn: {response}")
+                    return True
+                else:
+                    self.logger.error("LinkedIn API returned no response after posting")
+                    return False
+
+            except Exception as e:
+                # Check for rate limit or permission errors
+                error_str = str(e).lower()
+                if "rate" in error_str or "limit" in error_str or "429" in error_str:
+                    # Rate limited - exponential backoff
+                    wait_seconds = min(
+                        self._initial_backoff * (2 ** (attempt - 1)), self._max_backoff
+                    )
+                    self.logger.warning(
+                        f"LinkedIn rate limit hit. Waiting {wait_seconds:.1f}s before retry..."
+                    )
+                    time.sleep(wait_seconds)
+                elif attempt < self._max_retries:
+                    # Other transient errors - retry with backoff
+                    wait_seconds = min(
+                        self._initial_backoff * (2 ** (attempt - 1)), self._max_backoff
+                    )
+                    self.logger.warning(
+                        f"LinkedIn error: {e}. Retrying in {wait_seconds:.1f}s..."
+                    )
+                    time.sleep(wait_seconds)
+                else:
+                    self.logger.error(f"Max retries exceeded for LinkedIn: {e}")
+                    return False
+
+        self.logger.error("All retry attempts exhausted for LinkedIn")
+        return False
 
     def _truncate_for_linkedin(self, content: str) -> str:
         """

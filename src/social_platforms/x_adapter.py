@@ -1,6 +1,9 @@
 """X (Twitter) social media platform adapter."""
 
+import time
 from typing import Dict, Any
+import tweepy
+from tweepy.errors import TweepyException, TooManyRequests, Unauthorized, Forbidden
 from .adapter import SocialMediaAdapter
 from src.content_optimizer import ContentOptimizer
 
@@ -8,15 +11,47 @@ from src.content_optimizer import ContentOptimizer
 class XAdapter(SocialMediaAdapter):
     """Adapter for X (Twitter) platform with 280 character limit."""
 
-    def __init__(self, max_length: int = 280):
+    def __init__(
+        self,
+        api_key: str,
+        api_secret: str,
+        access_token: str,
+        access_token_secret: str,
+        max_length: int = 280,
+        max_retries: int = 3,
+        initial_backoff: float = 1.0,
+        max_backoff: float = 60.0,
+    ):
         """
-        Initialize X adapter.
+        Initialize X adapter with API credentials.
 
         Args:
+            api_key: X API key
+            api_secret: X API secret
+            access_token: X access token
+            access_token_secret: X access token secret
             max_length: Maximum character length (default 280 for X)
+            max_retries: Maximum number of retry attempts
+            initial_backoff: Initial backoff time in seconds
+            max_backoff: Maximum backoff time in seconds
         """
         self._max_length = max_length
         self._optimizer = ContentOptimizer()
+        self._max_retries = max_retries
+        self._initial_backoff = initial_backoff
+        self._max_backoff = max_backoff
+
+        # Initialize Tweepy client with OAuth 1.0a user context
+        self.client = tweepy.Client(
+            consumer_key=api_key,
+            consumer_secret=api_secret,
+            access_token=access_token,
+            access_token_secret=access_token_secret,
+            wait_on_rate_limit=False,  # We handle rate limits manually
+        )
+
+        # Verify credentials on initialization
+        self._verify_credentials()
 
     @property
     def platform_name(self) -> str:
@@ -154,3 +189,94 @@ class XAdapter(SocialMediaAdapter):
             return truncated[:last_newline].rstrip()
         else:
             return body[: max_len - 3].rstrip() + "..."
+
+    def _verify_credentials(self) -> None:
+        """
+        Verify X API credentials are valid.
+
+        Raises:
+            Unauthorized: If credentials are invalid
+            TweepyException: If verification fails for other reasons
+        """
+        try:
+            # Get own user info to verify credentials
+            response = self.client.get_me()
+            if response.data:
+                self.logger.info(
+                    f"X API credentials verified for user: @{response.data.username}"
+                )
+            else:
+                raise Unauthorized("Invalid X API credentials")
+        except Unauthorized:
+            raise
+        except Exception as e:
+            raise TweepyException(f"Failed to verify X credentials: {e}")
+
+    def post(self, text: str) -> bool:
+        """
+        Post text to X (Twitter) with retry logic and rate limit handling.
+
+        Args:
+            text: The tweet text to post
+
+        Returns:
+            True if posting succeeded, False otherwise
+        """
+        for attempt in range(1, self._max_retries + 1):
+            try:
+                self.logger.info(
+                    f"Posting to X (attempt {attempt}/{self._max_retries})"
+                )
+                response = self.client.create_tweet(text=text)
+
+                if response.data:
+                    tweet_id = response.data.get("id", "unknown")
+                    self.logger.info(f"Successfully posted to X: tweet_id={tweet_id}")
+                    return True
+                else:
+                    self.logger.error("X API returned no data after posting")
+                    return False
+
+            except TooManyRequests as e:
+                # Check rate limit headers if available
+                reset_time = getattr(e.response, "headers", {}).get(
+                    "x-rate-limit-reset"
+                )
+                if reset_time:
+                    wait_seconds = int(reset_time) - int(time.time())
+                    wait_seconds = max(1, wait_seconds)
+                else:
+                    # Exponential backoff
+                    wait_seconds = min(
+                        self._initial_backoff * (2 ** (attempt - 1)), self._max_backoff
+                    )
+
+                self.logger.warning(
+                    f"Rate limit hit. Waiting {wait_seconds:.1f}s before retry..."
+                )
+                time.sleep(wait_seconds)
+
+            except Unauthorized as e:
+                self.logger.error(f"X authentication failed: {e}")
+                return False
+            except Forbidden as e:
+                self.logger.error(f"X posting forbidden: {e}")
+                return False
+            except TweepyException as e:
+                if attempt < self._max_retries:
+                    wait_seconds = min(
+                        self._initial_backoff * (2 ** (attempt - 1)), self._max_backoff
+                    )
+                    self.logger.warning(
+                        f"Tweepy error: {e}. Retrying in {wait_seconds:.1f}s..."
+                    )
+                    time.sleep(wait_seconds)
+                else:
+                    self.logger.error(f"Max retries exceeded for X: {e}")
+                    return False
+            except Exception as e:
+                self.logger.error(f"Unexpected error posting to X: {e}", exc_info=True)
+                return False
+
+        self.logger.error("All retry attempts exhausted for X")
+        return False

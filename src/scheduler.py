@@ -38,8 +38,19 @@ class WiggumScheduler:
         self.metadata_collector = MetadataCollector(
             github_client=self.github_client, data_persistence=self.data_persistence
         )
-        self.x_adapter = XAdapter()
-        self.linkedin_adapter = LinkedInAdapter()
+
+        # Initialize social media adapters with credentials from settings
+        self.x_adapter = XAdapter(
+            api_key=settings.x_api_key,
+            api_secret=settings.x_api_secret,
+            access_token=settings.x_access_token,
+            access_token_secret=settings.x_access_token_secret,
+        )
+        self.linkedin_adapter = LinkedInAdapter(
+            client_id=settings.linkedin_client_id,
+            client_secret=settings.linkedin_client_secret,
+            access_token=settings.linkedin_access_token,
+        )
 
         self.logger.info("WiggumScheduler initialized successfully")
 
@@ -153,10 +164,6 @@ class WiggumScheduler:
         Args:
             metadata: Collected metadata to format for posting
         """
-        # Note: Actual posting requires API integration. For now, we log the formatted
-        # content. When API credentials are configured and ready, this can be extended
-        # to actually post using tweepy/linkedin-api.
-
         platforms = [("X", self.x_adapter), ("LinkedIn", self.linkedin_adapter)]
 
         for platform_name, adapter in platforms:
@@ -164,16 +171,21 @@ class WiggumScheduler:
                 self.logger.info(f"Generating {platform_name} post")
                 post_text = adapter.format(metadata)
                 self.logger.info(
-                    f"{platform_name} post preview ({len(post_text)} chars):"
+                    f"{platform_name} post prepared ({len(post_text)} chars):"
                 )
-                self.logger.info(f"---\n{post_text}\n---")
 
-                # TODO: Implement actual posting when API integration is ready
-                # self._actually_post_to_platform(adapter, post_text)
+                # Post to the platform
+                success = adapter.post(post_text)
 
-                self.logger.info(f"{platform_name} post prepared successfully")
+                if success:
+                    self.logger.info(f"Successfully posted to {platform_name}")
+                else:
+                    self.logger.error(f"Failed to post to {platform_name}")
+
             except Exception as e:
-                self.logger.error(f"Error preparing {platform_name} post: {e}")
+                self.logger.error(
+                    f"Error during {platform_name} posting: {e}", exc_info=True
+                )
 
     def _setup_schedule(self) -> None:
         """Configure the schedule based on settings."""

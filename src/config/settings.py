@@ -29,6 +29,13 @@ class Settings:
     # Data
     data_dir: str = "./data"
 
+    # Logging
+    log_level: str = "INFO"
+    log_dir: str = "./logs"
+    log_file: str = "wiggum.log"
+    log_max_size_mb: int = 10
+    log_backup_count: int = 5
+
     def __post_init__(self):
         """Validate required settings after initialization."""
         required_fields = [
@@ -74,6 +81,11 @@ def load_settings() -> Settings:
         schedule_cron=os.getenv("SCHEDULE_CRON", "0 9 * * 1"),
         schedule_interval_hours=_parse_int(os.getenv("SCHEDULE_INTERVAL_HOURS")),
         data_dir=os.getenv("DATA_DIR", "./data"),
+        log_level=os.getenv("LOG_LEVEL", "INFO"),
+        log_dir=os.getenv("LOG_DIR", "./logs"),
+        log_file=os.getenv("LOG_FILE", "wiggum.log"),
+        log_max_size_mb=_parse_int(os.getenv("LOG_MAX_SIZE_MB", "10")) or 10,
+        log_backup_count=_parse_int(os.getenv("LOG_BACKUP_COUNT", "5")) or 5,
     )
 
 
