@@ -1,11 +1,13 @@
 """Data persistence layer for storing weekly report history and tracking reported repos."""
 
 import json
+import logging
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Set
 from src.config.settings import Settings
+from src.logging_config import get_logger
 
 
 class DataPersistence:

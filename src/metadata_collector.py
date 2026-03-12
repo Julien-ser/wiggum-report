@@ -1,9 +1,11 @@
 """Repository metadata collector for gathering weekly GitHub data."""
 
+import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from src.github_client import GitHubClient
 from src.data_persistence import DataPersistence
+from src.logging_config import get_logger
 
 
 class MetadataCollector:
@@ -23,6 +25,7 @@ class MetadataCollector:
         """
         self.github_client = github_client
         self.data_persistence = data_persistence
+        self.logger = get_logger(__name__)
 
     def collect_weekly_metadata(
         self,
@@ -102,7 +105,9 @@ class MetadataCollector:
                     new_repos_full.append(detailed_info)
             except Exception as e:
                 # Log error but continue collecting other repos
-                print(f"Error collecting details for {repo_stats['full_name']}: {e}")
+                self.logger.warning(
+                    f"Error collecting details for {repo_stats['full_name']}: {e}"
+                )
                 continue
 
         updated_repos_full = []
@@ -120,7 +125,9 @@ class MetadataCollector:
                     )
                     updated_repos_full.append(detailed_info)
             except Exception as e:
-                print(f"Error collecting details for {repo_stats['full_name']}: {e}")
+                self.logger.warning(
+                    f"Error collecting details for {repo_stats['full_name']}: {e}"
+                )
                 continue
 
         # Calculate summary statistics

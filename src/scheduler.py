@@ -12,6 +12,7 @@ import schedule
 from src.config.settings import load_settings
 from src.data_persistence import DataPersistence
 from src.github_client import GitHubClient
+from src.logging_config import get_logger, setup_logging
 from src.metadata_collector import MetadataCollector
 from src.scripts.templates import generate_full_report, generate_social_media_summary
 from src.social_platforms.x_adapter import XAdapter
@@ -29,7 +30,11 @@ class WiggumScheduler:
             settings: Settings instance with configuration
         """
         self.settings = settings
-        self.logger = self._setup_logging()
+
+        # Setup centralized logging
+        setup_logging(settings)
+        self.logger = get_logger(__name__)
+
         self.running = False
 
         # Initialize components
@@ -40,16 +45,19 @@ class WiggumScheduler:
         )
 
         # Initialize social media adapters with credentials from settings
+        # Pass the scheduler's logger to adapters for consistent logging
         self.x_adapter = XAdapter(
             api_key=settings.x_api_key,
             api_secret=settings.x_api_secret,
             access_token=settings.x_access_token,
             access_token_secret=settings.x_access_token_secret,
+            logger=self.logger,
         )
         self.linkedin_adapter = LinkedInAdapter(
             client_id=settings.linkedin_client_id,
             client_secret=settings.linkedin_client_secret,
             access_token=settings.linkedin_access_token,
+            logger=self.logger,
         )
 
         self.logger.info("WiggumScheduler initialized successfully")

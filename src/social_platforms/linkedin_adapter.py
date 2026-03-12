@@ -1,5 +1,6 @@
 """LinkedIn social media platform adapter."""
 
+import logging
 import time
 from datetime import datetime, timedelta
 from typing import Dict, Any
@@ -19,6 +20,7 @@ class LinkedInAdapter(SocialMediaAdapter):
         max_retries: int = 3,
         initial_backoff: float = 1.0,
         max_backoff: float = 60.0,
+        logger=None,
     ):
         """
         Initialize LinkedIn adapter with API credentials.
@@ -31,6 +33,7 @@ class LinkedInAdapter(SocialMediaAdapter):
             max_retries: Maximum number of retry attempts
             initial_backoff: Initial backoff time in seconds
             max_backoff: Maximum backoff time in seconds
+            logger: Optional logger instance for recording activity
         """
         self._max_length = max_length
         self._max_retries = max_retries
@@ -43,6 +46,9 @@ class LinkedInAdapter(SocialMediaAdapter):
         self.client = Linkedin(client_id=client_id, client_secret=client_secret)
         # Set access token manually (linkedin-api library doesn't have a direct way)
         self.client.set_access_token(access_token)
+
+        # Initialize logger (use parent's pattern)
+        self.logger = logger or logging.getLogger(__name__)
 
         # Verify credentials on initialization
         self._verify_credentials()

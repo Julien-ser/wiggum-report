@@ -1,5 +1,6 @@
 """X (Twitter) social media platform adapter."""
 
+import logging
 import time
 from typing import Dict, Any
 import tweepy
@@ -21,6 +22,7 @@ class XAdapter(SocialMediaAdapter):
         max_retries: int = 3,
         initial_backoff: float = 1.0,
         max_backoff: float = 60.0,
+        logger=None,
     ):
         """
         Initialize X adapter with API credentials.
@@ -34,6 +36,7 @@ class XAdapter(SocialMediaAdapter):
             max_retries: Maximum number of retry attempts
             initial_backoff: Initial backoff time in seconds
             max_backoff: Maximum backoff time in seconds
+            logger: Optional logger instance for recording activity
         """
         self._max_length = max_length
         self._optimizer = ContentOptimizer()
@@ -49,6 +52,9 @@ class XAdapter(SocialMediaAdapter):
             access_token_secret=access_token_secret,
             wait_on_rate_limit=False,  # We handle rate limits manually
         )
+
+        # Initialize logger (use parent's pattern)
+        self.logger = logger or logging.getLogger(__name__)
 
         # Verify credentials on initialization
         self._verify_credentials()

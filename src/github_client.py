@@ -1,9 +1,11 @@
 """GitHub API client for interacting with GitHub using PyGithub."""
 
+import logging
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from github import Github, GithubException, Repository as PyGithubRepository
 from src.config.settings import Settings
+from src.logging_config import get_logger
 
 
 class GitHubClient:
@@ -18,6 +20,7 @@ class GitHubClient:
         """
         self.token = token
         self.github = Github(token)
+        self.logger = get_logger(__name__)
 
     def get_authenticated_user(self) -> Dict[str, Any]:
         """
@@ -43,6 +46,7 @@ class GitHubClient:
                 else None,
             }
         except GithubException as e:
+            self.logger.error(f"Failed to authenticate: {e}")
             raise GithubException(f"Failed to authenticate: {e}")
 
     def get_repositories(
@@ -62,8 +66,11 @@ class GitHubClient:
             repos = user.get_repos()
             if not include_private:
                 repos = [repo for repo in repos if not repo.private]
-            return list(repos)
+            repos_list = list(repos)
+            self.logger.info(f"Fetched {len(repos_list)} repositories")
+            return repos_list
         except GithubException as e:
+            self.logger.error(f"Failed to fetch repositories: {e}")
             raise GithubException(f"Failed to fetch repositories: {e}")
 
     def get_repository(self, full_name: str) -> Optional[PyGithubRepository.Repository]:
@@ -94,6 +101,7 @@ class GitHubClient:
             Dictionary with repository statistics
         """
         try:
+            self.logger.debug(f"Getting stats for repository: {repo.full_name}")
             # Get commit count (may require additional API calls, approximate via default branch)
             commit_count = None
             try:
@@ -147,6 +155,9 @@ class GitHubClient:
             List of commit information dictionaries
         """
         try:
+            self.logger.debug(
+                f"Fetching commits for {repo.full_name}, limit={limit}, since={since}"
+            )
             commits = []
             try:
                 commit_iter = repo.get_commits()
@@ -194,6 +205,7 @@ class GitHubClient:
             List of release information dictionaries
         """
         try:
+            self.logger.debug(f"Fetching releases for {repo.full_name}, limit={limit}")
             releases = []
             try:
                 for release in repo.get_releases()[:limit]:
@@ -324,6 +336,7 @@ class GitHubClient:
         Returns:
             Complete repository information dictionary
         """
+        self.logger.debug(f"Fetching detailed info for {repo.full_name}")
         info = self.get_repository_stats(repo)
 
         if include_commits:
@@ -339,6 +352,7 @@ class GitHubClient:
 
     def close(self):
         """Close the GitHub client connection."""
+        self.logger.info("Closing GitHub client connection")
         self.github.close()
 
     @classmethod
