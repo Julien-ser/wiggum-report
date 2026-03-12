@@ -2,6 +2,7 @@
 
 from typing import Dict, Any
 from .adapter import SocialMediaAdapter
+from src.content_optimizer import ContentOptimizer
 
 
 class XAdapter(SocialMediaAdapter):
@@ -15,6 +16,7 @@ class XAdapter(SocialMediaAdapter):
             max_length: Maximum character length (default 280 for X)
         """
         self._max_length = max_length
+        self._optimizer = ContentOptimizer()
 
     @property
     def platform_name(self) -> str:
@@ -108,7 +110,8 @@ class XAdapter(SocialMediaAdapter):
         total_length = len(body) + 1 + len(hashtags)
         if total_length > self.max_length:
             max_body_len = self.max_length - len(hashtags) - 1
-            body = self._truncate_body(body, max_body_len)
+            result = self._optimizer.optimize(body, max_body_len, platform="x")
+            body = result.optimized_text
 
         return body + "\n" + hashtags
 

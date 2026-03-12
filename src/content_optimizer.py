@@ -132,29 +132,6 @@ class ContentOptimizer:
 
         return None
 
-        # Accumulate sentences until we exceed limit
-        accumulated = ""
-        last_complete_idx = -1
-
-        for i, sentence in enumerate(sentences):
-            test_text = accumulated + sentence if accumulated else sentence
-            if len(test_text) <= max_length:
-                accumulated = test_text
-                last_complete_idx = i
-            else:
-                break
-
-        if last_complete_idx >= 0:
-            optimized = "".join(sentences[: last_complete_idx + 1]).rstrip()
-            return OptimizationResult(
-                optimized_text=optimized,
-                original_length=len(text),
-                optimized_length=len(optimized),
-                method="truncated",
-            )
-
-        return None
-
     def _summarize_extractive(
         self, text: str, max_length: int
     ) -> OptimizationResult | None:
@@ -177,50 +154,6 @@ class ContentOptimizer:
 
         if len(sentences) <= 1:
             return None
-
-        # Score sentences
-        scored_sentences = []
-        for i, sentence in enumerate(sentences):
-            score = self._score_sentence(sentence, i, len(sentences))
-            scored_sentences.append((score, sentence))
-
-        # Sort by score descending
-        scored_sentences.sort(key=lambda x: x[0], reverse=True)
-
-        # Try to fit highest-scoring sentences within limit
-        result_sentences = []
-        current_length = 0
-
-        for score, sentence in scored_sentences:
-            # Add sentence if it fits (with space for ellipsis if needed)
-            tentative_length = (
-                current_length + len(sentence) + (3 if result_sentences else 0)
-            )
-            if tentative_length <= max_length:
-                result_sentences.append(sentence)
-                current_length = tentative_length
-
-        if result_sentences:
-            # Sort selected sentences by original order
-            original_indices = []
-            for rs in result_sentences:
-                idx = sentences.index(rs)
-                original_indices.append((idx, rs))
-            original_indices.sort(key=lambda x: x[0])
-            ordered_sentences = [rs[1] for rs in original_indices]
-
-            optimized = " ".join(ordered_sentences)
-            if len(optimized) < len(text) and current_length < max_length:
-                optimized = optimized.rstrip() + " [...]"
-
-            return OptimizationResult(
-                optimized_text=optimized[:max_length],
-                original_length=len(text),
-                optimized_length=len(optimized[:max_length]),
-                method="summarized",
-            )
-
-        return None
 
         # Score sentences
         scored_sentences = []
