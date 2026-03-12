@@ -11,7 +11,7 @@
 - [x] Implement GitHub API client using Octokit (Node.js) or PyGithub (Python) to fetch authenticated user's repositories
 - [x] Create repository metadata collector to gather repo name, description, stars, forks, recent commits, README updates, and release notes from the past week
 - [x] Build data persistence layer using SQLite or JSON file to store weekly report history and track already-reported repos to avoid duplicates
-- [ ] Add date filtering logic to identify repos created or significantly updated within the last 7 days using GitHub's `created_at` and `updated_at` timestamps
+- [x] Add date filtering logic to identify repos created or significantly updated within the last 7 days using GitHub's `created_at` and `updated_at` timestamps
 
 ## Phase 3: Markdown Generation & Social Media Formatting
 - [ ] Design Markdown template for weekly reports with sections: Summary Statistics, New Repositories, Notable Updates, Trending Repos, and Call-to-Action

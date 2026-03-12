@@ -71,11 +71,11 @@ wiggum-report/
 - [x] Create project directory structure
 - [x] Set up environment variables management
 
-**Phase 2: GitHub Integration & Data Collection** - In Progress
+**Phase 2: GitHub Integration & Data Collection** - Complete
 - [x] Implement GitHub API client
 - [x] Create repository metadata collector
 - [x] Build data persistence layer using SQLite to store weekly reports and track reported repos
-- [ ] Add date filtering logic
+- [x] Add date filtering logic to identify repos created or updated within the last 7 days
 
 **Phase 3: Markdown Generation & Social Media Formatting** - Pending
 - [ ] Design Markdown template
