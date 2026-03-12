@@ -33,7 +33,8 @@ class DataPersistence:
         self.logger.debug("Initializing database tables")
         try:
             with sqlite3.connect(self.db_path) as conn:
-                conn.execute("""
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS reported_repos (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         full_name TEXT UNIQUE NOT NULL,
@@ -42,9 +43,11 @@ class DataPersistence:
                         created_at TEXT NOT NULL,
                         updated_at TEXT NOT NULL
                     )
-                """)
+                """
+                )
 
-                conn.execute("""
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS weekly_reports (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         week_start_date TEXT UNIQUE NOT NULL,
@@ -55,9 +58,11 @@ class DataPersistence:
                         total_repos_processed INTEGER NOT NULL,
                         created_at TEXT NOT NULL
                     )
-                """)
+                """
+                )
 
-                conn.execute("""
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS repo_week_association (
                         repo_id INTEGER NOT NULL,
                         report_id INTEGER NOT NULL,
@@ -66,7 +71,8 @@ class DataPersistence:
                         FOREIGN KEY (report_id) REFERENCES weekly_reports(id),
                         UNIQUE(repo_id, report_id, repo_type)
                     )
-                """)
+                """
+                )
 
                 conn.commit()
                 self.logger.debug("Database tables initialized successfully")
