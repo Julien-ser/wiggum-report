@@ -1,6 +1,6 @@
 """Markdown templates for weekly Wiggum Reports."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Any
 
 
@@ -129,10 +129,8 @@ def generate_new_repositories_section(new_repos: List[Dict[str, Any]]) -> str:
         markdown += "*No new repositories this week.*\n\n"
         return markdown
 
-    markdown += f"Found **{len(new_repos)}** new repository"
-    if len(new_repos) != 1:
-        markdown += "ies"
-    markdown += ":\n\n"
+    repo_word = "repository" if len(new_repos) == 1 else "repositories"
+    markdown += f"Found **{len(new_repos)}** new {repo_word}:\n\n"
 
     for repo in new_repos:
         markdown += generate_repository_card(repo)

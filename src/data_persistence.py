@@ -196,7 +196,7 @@ class DataPersistence:
             )
 
             # Helper to upsert repo record and return its ID
-            def upsert_repo(repo: Dict[str, Any]) -> int:
+            def upsert_repo(repo: Dict[str, Any]) -> Optional[int]:
                 full_name = repo["full_name"]
                 created_at = repo.get("created_at") or collection_iso
                 updated_at = repo.get("updated_at") or collection_iso

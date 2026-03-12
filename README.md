@@ -77,9 +77,9 @@ wiggum-report/
 - [x] Build data persistence layer using SQLite to store weekly reports and track reported repos
 - [x] Add date filtering logic to identify repos created or updated within the last 7 days
 
-**Phase 3: Markdown Generation & Social Media Formatting** - Pending
-- [ ] Design Markdown template
-- [ ] Implement report generator
+**Phase 3: Markdown Generation & Social Media Formatting** - In Progress
+- [x] Design Markdown template
+- [x] Implement report generator
 - [ ] Create platform-specific adapters (X, LinkedIn)
 - [ ] Build content optimizer
 
