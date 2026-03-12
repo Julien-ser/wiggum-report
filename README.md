@@ -60,6 +60,7 @@ wiggum-report/
    - `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET`: X/Twitter API credentials
    - `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_ACCESS_TOKEN`: LinkedIn API credentials
    - `SCHEDULE_CRON`: Cron expression (default: `0 9 * * 1` for Monday 9 AM)
+   - `SCHEDULE_INTERVAL_HOURS`: Optional interval in hours (overrides cron)
    - `DATA_DIR`: Data storage directory (default: `./data`)
 
 3. **Run the application:**
@@ -71,7 +72,7 @@ wiggum-report/
    - Run the report immediately on startup (can be disabled)
    - Then run weekly according to your `SCHEDULE_CRON` or `SCHEDULE_INTERVAL_HOURS` settings
    - Generate and save markdown reports to `./data/reports/`
-   - Log all activity to console (can be extended to file logging)
+   - Log all activity to console and rotating log files in `./logs/`
 
    To run once without scheduling:
    ```bash
@@ -79,6 +80,45 @@ wiggum-report/
    ```
 
    To run indefinitely as a daemon/service, see the Deployment section below.
+
+## Logging
+
+Wiggum Report uses Python's built-in logging module with centralized configuration. All log messages are prefixed with `[wiggum.*]` for easy filtering.
+
+**Configuration via environment variables:**
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LOG_LEVEL` | Minimum log level (DEBUG, INFO, WARNING, ERROR, CRITICAL) | `INFO` |
+| `LOG_DIR` | Directory to store log files | `./logs` |
+| `LOG_FILE` | Log filename | `wiggum.log` |
+| `LOG_MAX_SIZE_MB` | Maximum size per log file before rotation (MB) | `10` |
+| `LOG_BACKUP_COUNT` | Number of rotated log files to keep | `5` |
+
+**Log features:**
+- Rotating file handler: logs are automatically rotated when they reach the configured size
+- Console output: all logs are also printed to stdout/stderr
+- Hierarchical loggers: each module gets its own logger namespace (e.g., `wiggum.github_client`, `wiggum.scheduler`)
+- Structured format: `timestamp - logger_name - level - message`
+
+**Example log entries:**
+```
+2024-01-15 10:30:00 - wiggum.scheduler - INFO - Starting weekly report generation
+2024-01-15 10:30:05 - wiggum.github_client - DEBUG - Fetching commits for repo: owner/repo
+2024-01-15 10:30:10 - wiggum.x_adapter - INFO - Successfully posted to X: tweet_id=12345
+```
+
+**Viewing logs:**
+```bash
+# Tail the log file
+tail -f logs/wiggum.log
+
+# Filter by log level
+grep "ERROR" logs/wiggum.log
+
+# Filter by module
+grep "github_client" logs/wiggum.log
+```
 
 ## Current Progress
 

@@ -1,7 +1,12 @@
 """Markdown templates for weekly Wiggum Reports."""
 
+import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
+
+from src.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def format_date_range(week_start: datetime, collection_date: datetime) -> str:
@@ -238,6 +243,8 @@ def generate_full_report(metadata: Dict[str, Any]) -> str:
     Returns:
         Complete markdown report as a string
     """
+    logger.info("Generating full markdown report")
+
     collection_date_str = metadata.get("collection_date", "")
     week_start_str = metadata.get("week_start", "")
 
@@ -246,13 +253,19 @@ def generate_full_report(metadata: Dict[str, Any]) -> str:
             collection_date_str.replace("Z", "+00:00")
         )
         week_start = datetime.fromisoformat(week_start_str.replace("Z", "+00:00"))
-    except:
+    except Exception as e:
+        logger.warning(f"Failed to parse date strings: {e}. Using fallback dates.")
         collection_date = datetime.now()
         week_start = collection_date - timedelta(days=7)
 
     summary = metadata.get("summary", {})
     new_repos = metadata.get("new_repositories", [])
     updated_repos = metadata.get("updated_repositories", [])
+
+    logger.debug(
+        f"Report metadata: total_repos={summary.get('total_repos_processed', 0)}, "
+        f"new={len(new_repos)}, updated={len(updated_repos)}"
+    )
 
     # Build the complete report
     report = ""
@@ -270,6 +283,7 @@ def generate_full_report(metadata: Dict[str, Any]) -> str:
     report += generate_trending_repos_section(new_repos, updated_repos)
     report += generate_call_to_action_section()
 
+    logger.info(f"Generated report with {len(report)} characters")
     return report
 
 
@@ -284,6 +298,8 @@ def generate_social_media_summary(metadata: Dict[str, Any], platform: str = "x")
     Returns:
         Short summary text optimized for the platform
     """
+    logger.debug(f"Generating social media summary for platform: {platform}")
+
     summary = metadata.get("summary", {})
     total_repos = summary.get("total_repos_processed", 0)
     new_count = summary.get("new_repositories_count", 0)
@@ -311,7 +327,9 @@ def generate_social_media_summary(metadata: Dict[str, Any], platform: str = "x")
             text += "\n\n"
 
         text += "#WiggumReport #GitHub #OpenSource"
-        return text[:280]  # Ensure it fits
+        final_text = text[:280]  # Ensure it fits
+        logger.info(f"Generated X post: {len(final_text)} characters")
+        return final_text
 
     else:  # LinkedIn
         # LinkedIn: longer but still professional
@@ -330,4 +348,6 @@ def generate_social_media_summary(metadata: Dict[str, Any], platform: str = "x")
                 text += f"• ...and {len(new_repos) - 3} more\n"
 
         text += "\n#OpenSource #GitHub #WiggumReport #SoftwareDevelopment"
-        return text
+        final_text = text[:3000]  # LinkedIn limit
+        logger.info(f"Generated LinkedIn post: {len(final_text)} characters")
+        return final_text
